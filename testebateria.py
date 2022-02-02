@@ -1,17 +1,13 @@
-from datetime import datetime
 from power_api import SixfabPower
-import time
 
-api = SixfabPower()
-
-api.set_power_outage_event_status(2) #desabilita o evento de falta de energia que é desligar o sistema
+api = SixfabPower()  
+api.set_power_outage_event_status(2) #Mantém o evento de falta de energia desabilitado (apenas no começo do programa)
+level_battery = 25     #Nível de bateria para o sistema desligar
 
 while True:
-    if api.get_battery_level() < 10:  #se o nivel de bateria cai abaixo de 10% habilita o desligamento
-        api.set_power_outage_event_status(1)
-        print('vou desligar')
-    else:
-        print('nao vou desligar'+ ' ' + str(api.get_battery_level()))
-        
-    time.sleep(5)
+    if api.get_battery_level() <= level_battery:  #Se o nível de bateria cai abaixo de um certo valor o sistema habilita o evento de falta de energia, 
+                                                  #logo só desligará se estiver sem energia da rede e abaixo do nível especificado.
+        api.set_power_outage_event_status(1)      #Evento habilitado e inicia o processo de desligamento
+        print('SHUTDOWN')
+
         
