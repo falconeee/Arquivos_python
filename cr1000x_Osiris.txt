@@ -1,0 +1,323 @@
+'CR100x Series Datalogger
+'Date: 01/04/2022
+'Program author: Falcone
+
+'Declare Public Variables
+Public intervalo1
+Public intervalo2
+Public datahora_init As String
+Public datahora_fim As String
+Public com_aux As String
+Public com As String
+Public aux
+Public caractere As Long
+Public soma As Long
+Public check As String
+Public soma_hex As String
+Public flag2 As String
+Public modelo As String
+Public comando As String * 10000
+Public cabecalho As String * 10000
+Public medicoes As String * 10000
+Public leitura1 As String * 10000
+Public leitura2 As String * 10000
+Public leitura3 As String * 10000
+Public leitura1_trim As String * 10000
+Public leitura2_trim As String * 10000
+Public leitura3_trim As String * 10000
+Public resp_off As String * 10000
+Public resp_sc As String * 10000
+Public resp_unitint As String * 10000
+Public resp_unitext As String * 10000
+Public total_part
+Public pm10_part
+Public pm25_part
+Public pm1_part
+Public externo1
+Public externo2
+Public wind_speed
+Public wind_direction 
+Public off_tsp As Float, off_pm10 As Float, off_pm25 As Float, off_pm1 As Float, off_ext1 As Float, off_ext2 As Float, off_wspd As Float, off_wdir As Float
+Public unit_tsp As String, unit_pm10 As String, unit_pm25 As String, unit_pm1 As String, unit_ext1 As String, unit_ext2 As String, unit_wspd As String, unit_wdir As String
+Public sc_tsp As Float, sc_pm10 As Float, sc_pm25 As Float, sc_pm1 As Float, sc_ext1 As Float, sc_ext2 As Float, sc_wspd As Float, sc_wdir As Float
+Public flag2_ascii
+
+'Define Data Tables. 
+DataTable (osiristeste,1,-1) 'Set table size to # of records, or -1 to autoallocate.
+	Sample (1,medicoes,String)
+EndTable
+
+'Main Program
+BeginProg
+  modelo = "O4429"
+  intervalo1 = 300 'intervalo da amostra
+  intervalo2 = 1   
+  
+  'Abre comunicao serial
+  SerialOpen(ComC5,9600,16,0,10000,1) 'Baudrate 9600, No parity, 1 stop bit, 8 databits
+  
+  'parar leitura se estiver lendo
+  soma = 0
+  com = "6"
+  com_aux = modelo&com
+  For aux = 1 To Len(com_aux)
+    caractere = ASCII(com_aux(1,1,aux))
+    soma = soma + caractere
+  Next aux
+  soma_hex = Hex(soma)
+  check = Mid(soma_hex,2,3) 'checksum do comando a ser enviado para o Osiris
+  comando = "!"&com_aux&check&CHR(13) 'monta o comando
+  SerialOut(ComC5,comando,CHR(13),0,100) 'envia o comando
+  
+  Scan (1,Sec,0,0)
+    
+    'limpar memoria
+    soma = 0
+    com = "5"
+    com_aux = modelo&com
+    For aux = 1 To Len(com_aux)
+      caractere = ASCII(com_aux(1,1,aux))
+      soma = soma + caractere
+    Next aux
+    soma_hex = Hex(soma)
+    check = Mid(soma_hex,2,3)
+    comando = "!"&com_aux&check&CHR(13)
+	  SerialOut(ComC5,comando,CHR(13),0,100) 
+	  
+    Delay(1,intervalo2,Sec)
+    
+    'inicia amostra
+    soma = 0
+    com = "4"
+    com_aux = modelo&com
+    For aux = 1 To Len(com_aux)
+      caractere = ASCII(com_aux(1,1,aux))
+      soma = soma + caractere
+    Next aux
+    soma_hex = Hex(soma)
+    check = Mid(soma_hex,2,3)
+    comando = "!"&com_aux&check&CHR(13)
+	  SerialOut(ComC5,comando,CHR(13),0,100) 	  
+    
+    'pausa pelo tempo determinado da amostra
+    Delay(1,intervalo1,Sec)
+    
+    'encerra amostra
+    soma = 0
+    com = "6"
+    com_aux = modelo&com
+    For aux = 1 To Len(com_aux)
+      caractere = ASCII(com_aux(1,1,aux))
+      soma = soma + caractere
+    Next aux
+    soma_hex = Hex(soma)
+    check = Mid(soma_hex,2,3)
+    comando = "!"&com_aux&check&CHR(13)
+    SerialOut(ComC5,comando,CHR(13),0,100)
+    
+    Delay(1,intervalo2,Sec)
+    SerialFlush(ComC5)
+    
+    'inicia leitura dos espacos de memoria para montagem do cabecalho
+    soma = 0
+    com = "10300"
+    com_aux = modelo&com
+    For aux = 1 To Len(com_aux)
+      caractere = ASCII(com_aux(1,1,aux))
+      soma = soma + caractere
+    Next aux
+    soma_hex = Hex(soma)
+    check = Mid(soma_hex,2,3)
+    comando = "!"&com_aux&check&CHR(13)
+    SerialOut(ComC5,comando,CHR(13),0,100)
+    SerialIn(leitura1,ComC5,0,CHR(13),500)
+    leitura1_trim = Mid(leitura1,12,64) 'retira comeco do comando enviado e checksum do final
+    
+    soma = 0
+    com = "10310"
+    com_aux = modelo&com
+    For aux = 1 To Len(com_aux)
+      caractere = ASCII(com_aux(1,1,aux))
+      soma = soma + caractere
+    Next aux
+    soma_hex = Hex(soma)
+    check = Mid(soma_hex,2,3)
+    comando = "!"&com_aux&check&CHR(13)
+    SerialOut(ComC5,comando,CHR(13),0,100)
+    SerialIn(leitura2,ComC5,0,CHR(13),500)
+    leitura2_trim = Mid(leitura2,12,64)
+    
+    soma = 0
+    com = "10320"
+    com_aux = modelo&com
+    For aux = 1 To Len(com_aux)
+      caractere = ASCII(com_aux(1,1,aux))
+      soma = soma + caractere
+    Next aux
+    soma_hex = Hex(soma)
+    check = Mid(soma_hex,2,3)
+    comando = "!"&com_aux&check&CHR(13)
+    SerialOut(ComC5,comando,CHR(13),0,100)
+    SerialIn(leitura3,ComC5,0,CHR(13),500)
+    leitura3_trim = Mid(leitura3,12,64)
+    
+    cabecalho = leitura1_trim&leitura2_trim&leitura3_trim 'concatena as respostas para criar cabecalho
+    
+    'verificando unidades, scales e offsets
+    flag2 = Mid(cabecalho,1,1)
+    flag2_ascii = ASCII(flag2)
+    If flag2_ascii = 56 OR 57 OR 65 OR 66 OR 67 OR 68 OR 69 OR 70 Then
+      soma = 0
+      com = "a0200"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,2)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_unitext,ComC5,0,CHR(13),500)
+    
+      soma = 0
+      com = "a0240"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,3)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_unitint,ComC5,0,CHR(13),500)
+    
+      soma = 0
+      com = "a0480"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,3)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_sc,ComC5,0,CHR(13),500)
+      
+      soma = 0
+      com = "a04C0"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,3)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_off,ComC5,0,CHR(13),500)
+      
+    Else
+      soma = 0
+      com = "a0200"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,2)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_unitext,ComC5,0,CHR(13),500)
+    
+      soma = 0
+      com = "a01C0"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,3)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_unitint,ComC5,0,CHR(13),500)
+    
+      soma = 0
+      com = "a0440"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,3)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_sc,ComC5,0,CHR(13),500)
+      
+      soma = 0
+      com = "a04C0"
+      com_aux = modelo&com
+      For aux = 1 To Len(com_aux)
+        caractere = ASCII(com_aux(1,1,aux))
+        soma = soma + caractere
+      Next aux
+      soma_hex = Hex(soma)
+      check = Mid(soma_hex,2,3)
+      comando = "!"&com_aux&check&CHR(13)
+      SerialOut(ComC5,comando,CHR(13),0,100)
+      SerialIn(resp_off,ComC5,0,CHR(13),500)
+        
+    EndIf
+    
+    'definindo unidades das medidas
+    unit_tsp = Mid(resp_unitint,20,8)
+    unit_pm10 = Mid(resp_unitint,36,8)
+    unit_pm25 = Mid(resp_unitint,52,8)
+    unit_pm1 = Mid(resp_unitint,68,8)
+    unit_ext1 = Mid(resp_unitext,20,8)
+    unit_ext2 = Mid(resp_unitext,36,8)
+    unit_wspd = Mid(resp_unitext,52,8)
+    unit_wdir = Mid(resp_unitext,68,8)
+    
+    'definindo scales
+    sc_tsp = Mid(resp_sc,12,8)
+    sc_pm10 = Mid(resp_sc,20,8)
+    sc_pm25 = Mid(resp_sc,28,8)
+    sc_pm1 = Mid(resp_sc,36,8)
+    sc_ext1 = Mid(resp_sc,44,8)
+    sc_ext2 = Mid(resp_sc,52,8)
+    sc_wspd = Mid(resp_sc,60,8)
+    sc_wdir = Mid(resp_sc,68,8)
+    
+    'definindo offstes
+    off_tsp = Mid(resp_off,12,8)
+    off_pm10 = Mid(resp_off,20,8)
+    off_pm25 = Mid(resp_off,28,8)
+    off_pm1 = Mid(resp_off,36,8)
+    off_ext1 = Mid(resp_off,44,8)
+    off_ext2 = Mid(resp_off,52,8)
+    off_wspd = Mid(resp_off,60,8)
+    off_wdir = Mid(resp_off,68,8)
+    
+
+    datahora_init = Mid(cabecalho,13,2) &"/"& Mid(cabecalho,19,2) &"/"& Mid(cabecalho,17,2) &" "& Mid(cabecalho,9,2) &":"& Mid(cabecalho,11,2) &":"& Mid(cabecalho,15,2)
+    datahora_fim = Mid(cabecalho,117,2) &"/"& Mid(cabecalho,123,2) &"/"& Mid(cabecalho,121,2) &" "& Mid(cabecalho,113,2) &":"& Mid(cabecalho,115,2)
+    total_part = (HexToDec(Mid(cabecalho,65,4)) - off_tsp)*sc_tsp
+    pm10_part = (HexToDec(Mid(cabecalho,69,4)) - off_pm10)*sc_pm10
+    pm25_part = (HexToDec(Mid(cabecalho,73,4)) - off_pm25)*sc_pm25
+    pm1_part = (HexToDec(Mid(cabecalho,77,4)) - off_pm1)*sc_pm1
+    externo1 = (HexToDec(Mid(cabecalho,81,4)) - off_ext1)*sc_ext1
+    externo2 = (HexToDec(Mid(cabecalho,85,4)) - off_ext2)*sc_ext2
+    wind_speed = (HexToDec(Mid(cabecalho,89,4)) - off_wspd)*sc_wspd
+    wind_direction = (HexToDec(Mid(cabecalho,93,4)) - off_wdir)*sc_wdir
+    
+    medicoes = datahora_init &" ; "& datahora_fim &" ; "& total_part & unit_tsp &" ; "& pm10_part & unit_pm10 &" ; "& pm25_part & unit_pm25 &" ; "& pm1_part & unit_pm1 &" ; "& externo1 & unit_ext1 &" ; "& externo2 & unit_ext2 &" ; "& wind_speed & unit_wspd &" ; "& wind_direction & unit_wdir
+    CallTable osiristeste
+    SerialFlush(ComC5)
+	NextScan
+EndProg
